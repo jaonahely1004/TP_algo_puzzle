@@ -6,6 +6,36 @@ def generate_puzzle(n):
     random.shuffle(puzzle)
     return [puzzle[i:i + n] for i in range(0, len(puzzle), n)]
 
+def generate_resolvable_puzzle(dimension, shuffle_moves=100):
+    """
+    Génère un puzzle résolvable en partant d'un état final et en effectuant des déplacements valides.
+
+    :param dimension: Taille du puzzle (par exemple, 3 pour un puzzle 3x3).
+    :param shuffle_moves: Nombre de déplacements aléatoires pour mélanger le puzzle.
+    :return: Puzzle mélangé et solvable.
+    """
+    # Créer l'état final (goal)
+    puzzle = [[(i * dimension + j + 1) % (dimension * dimension) for j in range(dimension)] for i in range(dimension)]
+
+    # Trouver la position initiale de la case vide (0)
+    empty_pos = (dimension - 1, dimension - 1)
+
+    # Effectuer des déplacements inverses aléatoires
+    for _ in range(shuffle_moves):
+        row, col = empty_pos
+        moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Haut, bas, gauche, droite
+        random.shuffle(moves)  # Mélanger les directions
+
+        for dr, dc in moves:
+            new_row, new_col = row + dr, col + dc
+            if 0 <= new_row < dimension and 0 <= new_col < dimension:
+                # Échanger la case vide avec la case voisine
+                puzzle[row][col], puzzle[new_row][new_col] = puzzle[new_row][new_col], puzzle[row][col]
+                empty_pos = (new_row, new_col)
+                break  # Effectuer un seul mouvement valide
+
+    return puzzle
+
 
 def swap_pieces(puzzle):
     # Permet de swap deux pièces
@@ -14,8 +44,22 @@ def swap_pieces(puzzle):
 
 
 def get_neighbors(state):
-    # Renvoie les voisins possibles pour A*
-    pass
+    neighbors = []
+    n = len(state)
+    # Trouver la position de la case vide
+    empty_pos = [(i, j) for i in range(n) for j in range(n) if state[i][j] == 0][0]
+    row, col = empty_pos
+
+    # Vérifier les mouvements possibles et générer les états voisins
+    moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Haut, bas, gauche, droite
+    for dr, dc in moves:
+        new_row, new_col = row + dr, col + dc
+        if 0 <= new_row < n and 0 <= new_col < n:
+            new_state = [list(row) for row in state]  # Copie du tableau
+            new_state[row][col], new_state[new_row][new_col] = new_state[new_row][new_col], new_state[row][col]
+            neighbors.append(new_state)
+
+    return neighbors
 
 
 def get_random_positions(puzzle):

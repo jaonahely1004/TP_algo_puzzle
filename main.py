@@ -1,5 +1,6 @@
 import pygame
-from Utils import generate_puzzle
+from Utils import generate_puzzle, generate_resolvable_puzzle
+from Solver import a_star_solver
 
 # Fonction pour dessiner le puzzle
 def draw_puzzle(screen, puzzle, block_size):
@@ -89,10 +90,96 @@ def find_empty_pos(puzzle):
             if value == 0:  # Trouver la case vide
                 return (i, j)
 
+def draw_button(screen, text, x, y, width, height, font_size=50):
+    font = pygame.font.Font(None, font_size)
+    button_rect = pygame.Rect(x, y, width, height)
+    pygame.draw.rect(screen, (200, 200, 200), button_rect)  # Couleur de fond
+    pygame.draw.rect(screen, (0, 0, 0), button_rect, 2)  # Bordure noire
+
+    text_surface = font.render(text, True, (0, 0, 0))
+    text_rect = text_surface.get_rect(center=button_rect.center)
+    screen.blit(text_surface, text_rect)
+
+    return button_rect
+
+
+def draw_message(screen, message, width, height, font_size=50, max_width=None):
+    """
+    Affiche un message au centre de l'écran avec un ajustement automatique.
+
+    :param screen: L'écran Pygame.
+    :param message: Le message à afficher.
+    :param width: Largeur de l'écran.
+    :param height: Hauteur de l'écran.
+    :param font_size: Taille initiale de la police.
+    :param max_width: Largeur maximale du texte (facultatif).
+    """
+    font = pygame.font.Font(None, font_size)
+
+    # Découper le message en lignes si nécessaire
+    if max_width is None:
+        max_width = width - 20  # Ajouter une marge de 20 pixels
+
+    words = message.split()
+    lines = []
+    current_line = []
+
+    for word in words:
+        # Tester la largeur actuelle de la ligne
+        test_line = ' '.join(current_line + [word])
+        text_surface = font.render(test_line, True, (0, 0, 0))
+        if text_surface.get_width() <= max_width:
+            current_line.append(word)
+        else:
+            lines.append(' '.join(current_line))
+            current_line = [word]
+
+    # Ajouter la dernière ligne
+    if current_line:
+        lines.append(' '.join(current_line))
+
+    # Dessiner chaque ligne au centre
+    y_offset = (height - font_size * len(lines)) // 2
+    for i, line in enumerate(lines):
+        text_surface = font.render(line, True, (0, 255, 0))
+        text_rect = text_surface.get_rect(center=(width // 2, y_offset + i * font_size))
+        screen.blit(text_surface, text_rect)
+
+    pygame.display.flip()  # Mettre à jour l'écran
+
+
+def solve_puzzle(screen, puzzle, goal, block_size):
+    solution_steps = a_star_solver(puzzle, goal, 5)  # Résolution avec A*
+    if solution_steps:
+        for step in solution_steps:
+            draw_puzzle(screen, step, block_size)
+            pygame.display.flip()
+            pygame.time.delay(200)  # Pause pour animer les étapes
+
+        # Dessiner l'état final (dernier état de solution_steps)
+        draw_puzzle(screen, solution_steps[-1], block_size)
+        pygame.display.flip()  # S'assurer que l'affichage reste à jour
+
+        return solution_steps  # Retourne les étapes pour mise à jour dans main
+    else:
+        print("Aucune solution trouvée.")
+        return None
+
+
+def is_solved(puzzle, goal):
+    """
+    Vérifie si le puzzle est dans l'état résolu (égal à l'état final).
+
+    :param puzzle: Le puzzle actuel.
+    :param goal: L'état final.
+    :return: True si le puzzle est résolu, sinon False.
+    """
+    return puzzle == goal
+
 # Fonction principale pour lancer le jeu
 def main():
     pygame.init()
-    WIDTH, HEIGHT = 600, 600
+    WIDTH, HEIGHT = 600, 700
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
 
     # Afficher le menu pour choisir la dimension
@@ -106,8 +193,15 @@ def main():
     pygame.display.set_caption(f"{dimension}x{dimension} Puzzle")
 
     # Exemple de génération de puzzle
-    puzzle = generate_puzzle(dimension)
+    if k == 0:
+        # Générer un puzzle résolvable si k == 0
+        puzzle = generate_resolvable_puzzle(dimension)
+    else:
+        # Générer un puzzle aléatoire classique
+        puzzle = generate_puzzle(dimension)
     print(puzzle)
+
+    goal = [[(i * dimension + j + 1) % (dimension * dimension) for j in range(dimension)] for i in range(dimension)]
 
     # Taille d'une case dans le puzzle
     block_size = WIDTH // dimension
@@ -119,15 +213,46 @@ def main():
     # Nombre de déplacements effectués
     move_count = 0
 
+    # Bouton pour la résolution automatique
+    solve_button_rect = draw_button(screen, "Résoudre", 200, 620, 200, 50)
+
     # Liste pour suivre les pièces sélectionnées pour swap
     selected_pieces = []
 
     running = True
+    solving = False
+    game_finished = False
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            # Si la partie est terminée, attendre une nouvelle partie
+            if game_finished:
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    # L'utilisateur peut cliquer pour redémarrer une nouvelle partie
+                    dimension = choose_dimension(screen)
+                    if dimension:
+                        k = get_k_value(screen)
+                        if k == 0:
+                            # Générer un puzzle résolvable si k == 0
+                            puzzle = generate_resolvable_puzzle(dimension)
+                        else:
+                            # Générer un puzzle aléatoire classique
+                            puzzle = generate_puzzle(dimension)
+                        print(puzzle)
+                        goal = [[(i * dimension + j + 1) % (dimension * dimension) for j in range(dimension)]
+                                for i in range(dimension)]
+                        block_size = WIDTH // dimension
+                        empty_pos = find_empty_pos(puzzle)
+                        move_count = 0
+                        solving = False
+                        game_finished = False  # Réinitialiser l'état de fin
+                continue
 
+            # Détecter le clic sur le bouton
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if solve_button_rect.collidepoint(event.pos):
+                    solving = True
             # Gérer les touches de direction pour déplacer une pièce
             if event.type == pygame.KEYDOWN:
                 row, col = empty_pos
@@ -147,21 +272,47 @@ def main():
                 if empty_pos != old_empty_pos:
                     move_count += 1
 
+                # Afficher l'état du puzzle après le mouvement
+                screen.fill((255, 255, 255))
+                draw_puzzle(screen, puzzle, block_size)
+                pygame.display.flip()
+
+                # Vérifier si le puzzle est résolu après le mouvement
+                if is_solved(puzzle, goal):
+                    game_finished = True
+
             # Si le nombre de déplacements atteint k, demander un swap
-            if move_count % k == 0 and move_count > 0:
-                selected_pieces = select_swap_pieces(screen, puzzle, block_size)
-                if selected_pieces:
-                    # Swap les pièces sélectionnées
-                    swap_pieces(puzzle, selected_pieces)
-                    move_count = 0
 
-        # Effacer l'écran
-        screen.fill((255, 255, 255))
+            if k == 0:
+                pass
+            elif move_count % k == 0 and move_count > 0:
+                    selected_pieces = select_swap_pieces(screen, puzzle, block_size)
+                    if selected_pieces:
+                        # Swap les pièces sélectionnées
+                        swap_pieces(puzzle, selected_pieces)
+                        move_count = 0
 
-        # Dessiner le puzzle
-        draw_puzzle(screen, puzzle, block_size)
+        # Résolution automatique
+        if solving:
+            solution_steps = solve_puzzle(screen, puzzle, goal, block_size)
+            if solution_steps:  # Si une solution a été trouvée
+                puzzle = solution_steps[-1]  # Mettre à jour le puzzle avec l'état final
+                game_finished = True
+            solving = False
 
-        # Mettre à jour l'affichage
+        # Effacer l'écran uniquement si nécessaire
+        #if not solving:
+            #screen.fill((255, 255, 255))
+
+        if game_finished:
+            draw_message(screen, "Partie Terminer ! Cliquez pour recommencer.", WIDTH, HEIGHT)
+        else:
+            # Dessiner le puzzle
+            draw_puzzle(screen, puzzle, block_size)
+
+            # Dessiner le bouton de résolution
+            solve_button_rect = draw_button(screen, "Résoudre", 200, 620, 200, 50)
+
         pygame.display.flip()
 
     pygame.quit()
