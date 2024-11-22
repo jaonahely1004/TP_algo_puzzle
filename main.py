@@ -82,6 +82,13 @@ def get_k_value(screen):
                 elif event.unicode.isdigit():
                     input_text += event.unicode
     return ( int(k_text) + 1 )
+#fonction pour la recherche de la case vide
+def find_empty_pos(puzzle):
+    for i, row in enumerate(puzzle):
+        for j, value in enumerate(row):
+            if value == 0:  # Trouver la case vide
+                return (i, j)
+
 # Fonction principale pour lancer le jeu
 def main():
     pygame.init()
@@ -100,12 +107,14 @@ def main():
 
     # Exemple de génération de puzzle
     puzzle = generate_puzzle(dimension)
+    print(puzzle)
 
     # Taille d'une case dans le puzzle
     block_size = WIDTH // dimension
 
     # Position de la case vide (initialement à la dernière position)
-    empty_pos = (dimension - 1, dimension - 1)
+    empty_pos = find_empty_pos(puzzle)
+    print(empty_pos)
 
     # Nombre de déplacements effectués
     move_count = 0
@@ -121,18 +130,19 @@ def main():
 
             # Gérer les touches de direction pour déplacer une pièce
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:  # Flèche haut
-                    empty_pos = move_puzzle("up", puzzle, empty_pos)
-                    move_count += 1
-                elif event.key == pygame.K_DOWN:  # Flèche bas
-                    empty_pos = move_puzzle("down", puzzle, empty_pos)
-                    move_count += 1
-                elif event.key == pygame.K_LEFT:  # Flèche gauche
-                    empty_pos = move_puzzle("left", puzzle, empty_pos)
-                    move_count += 1
-                elif event.key == pygame.K_RIGHT:  # Flèche droite
-                    empty_pos = move_puzzle("right", puzzle, empty_pos)
-                    move_count += 1
+                row, col = empty_pos
+                if event.key == pygame.K_UP and row < len(puzzle) - 1:  # Déplacer vers le haut si possible
+                    puzzle[row][col], puzzle[row + 1][col] = puzzle[row + 1][col], puzzle[row][col]
+                    empty_pos = (row + 1, col)
+                elif event.key == pygame.K_DOWN and row > 0:  # Déplacer vers le bas si possible
+                    puzzle[row][col], puzzle[row - 1][col] = puzzle[row - 1][col], puzzle[row][col]
+                    empty_pos = (row - 1, col)
+                elif event.key == pygame.K_LEFT and col < len(puzzle[0]) - 1:  # Déplacer vers la gauche si possible
+                    puzzle[row][col], puzzle[row][col + 1] = puzzle[row][col + 1], puzzle[row][col]
+                    empty_pos = (row, col + 1)
+                elif event.key == pygame.K_RIGHT and col > 0:  # Déplacer vers la droite si possible
+                    puzzle[row][col], puzzle[row][col - 1] = puzzle[row][col - 1], puzzle[row][col]
+                    empty_pos = (row, col - 1)
 
             # Si le nombre de déplacements atteint k, demander un swap
             if move_count % k == 0 and move_count > 0:

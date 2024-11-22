@@ -3,7 +3,7 @@ import random
 def generate_puzzle(n):
     # Génère un puzzle n x n mélangé
     puzzle = list(range(1, n * n)) + [0]  # 0 représente la case vide
-    random.shuffle(puzzle[:-1])
+    random.shuffle(puzzle)
     return [puzzle[i:i + n] for i in range(0, len(puzzle), n)]
 
 
