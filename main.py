@@ -131,6 +131,7 @@ def main():
             # Gérer les touches de direction pour déplacer une pièce
             if event.type == pygame.KEYDOWN:
                 row, col = empty_pos
+                old_empty_pos = empty_pos
                 if event.key == pygame.K_UP and row < len(puzzle) - 1:  # Déplacer vers le haut si possible
                     puzzle[row][col], puzzle[row + 1][col] = puzzle[row + 1][col], puzzle[row][col]
                     empty_pos = (row + 1, col)
@@ -143,6 +144,8 @@ def main():
                 elif event.key == pygame.K_RIGHT and col > 0:  # Déplacer vers la droite si possible
                     puzzle[row][col], puzzle[row][col - 1] = puzzle[row][col - 1], puzzle[row][col]
                     empty_pos = (row, col - 1)
+                if empty_pos != old_empty_pos:
+                    move_count += 1
 
             # Si le nombre de déplacements atteint k, demander un swap
             if move_count % k == 0 and move_count > 0:
