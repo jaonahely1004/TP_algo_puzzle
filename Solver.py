@@ -19,7 +19,7 @@ def a_star_solver(puzzle, goal, k):
     """Résolution A* pour un puzzle n x n."""
 
     def f(state):
-        g_cost = k  # Le coût pour atteindre cet état (vous pouvez ajuster cette partie)
+        g_cost = k  # Le coût pour atteindre cet état
         h_cost = manhattan_distance(state, goal)  # Heuristique : distance de Manhattan
         return g_cost + h_cost
 
