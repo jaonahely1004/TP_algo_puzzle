@@ -1,6 +1,7 @@
 import pygame
 from Utils import generate_puzzle, generate_resolvable_puzzle
 from Solver import a_star_solver
+from Solver import run_experiments_with_csv_export
 
 # Fonction pour dessiner le puzzle
 def draw_puzzle(screen, puzzle, block_size):
@@ -149,7 +150,13 @@ def draw_message(screen, message, width, height, font_size=50, max_width=None):
 
 
 def solve_puzzle(screen, puzzle, goal, block_size):
-    solution_steps = a_star_solver(puzzle, goal, 5)  # Résolution avec A*
+    solution_steps, move_count = a_star_solver(puzzle, goal, 5)  # Résolution avec A*
+    if not solution_steps:  # Si aucune solution n'est trouvée
+        print("Aucune solution trouvée.")
+        return None, move_count
+
+    print(f"Solution trouvée en {move_count} déplacements.")
+
     if solution_steps:
         for step in solution_steps:
             draw_puzzle(screen, step, block_size)
@@ -160,10 +167,10 @@ def solve_puzzle(screen, puzzle, goal, block_size):
         draw_puzzle(screen, solution_steps[-1], block_size)
         pygame.display.flip()  # S'assurer que l'affichage reste à jour
 
-        return solution_steps  # Retourne les étapes pour mise à jour dans main
+        return solution_steps, move_count  # Retourne les étapes pour mise à jour dans main
     else:
         print("Aucune solution trouvée.")
-        return None
+        return None, move_count
 
 
 def is_solved(puzzle, goal):
@@ -294,7 +301,10 @@ def main():
 
         # Résolution automatique
         if solving:
-            solution_steps = solve_puzzle(screen, puzzle, goal, block_size)
+            run_experiments_with_csv_export(
+                [puzzle], goal, [k], "results.csv"
+            )
+            solution_steps, move_count = solve_puzzle(screen, puzzle, goal, block_size)
             if solution_steps:  # Si une solution a été trouvée
                 puzzle = solution_steps[-1]  # Mettre à jour le puzzle avec l'état final
                 game_finished = True
