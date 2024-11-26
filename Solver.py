@@ -1,7 +1,7 @@
 from heapq import heappop, heappush
-
 from Utils import get_neighbors
-
+import csv
+import time
 
 def manhattan_distance(state, goal):
     distance = 0
@@ -14,6 +14,34 @@ def manhattan_distance(state, goal):
                 distance += abs(i - goal_i) + abs(j - goal_j)
     return distance
 
+def solvepuzzle_and_record(puzzle, goal, k):
+    """Résout le puzzle et enregistre les résultats."""
+    start_time = time.time()
+    solution, moves = a_star_solver(puzzle, goal, k)
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    success = solution is not None
+    return elapsed_time, len(solution) if success else "N/A", success
+
+def export_results_to_csv(filename, results):
+    """Exporte les résultats dans un fichier CSV."""
+    with open(filename, 'w', newline='') as file:
+        writer = csv.writer(file)
+        # En-tête des colonnes
+        writer.writerow(["Temps (s)", "Déplacements", "Succès"])
+        writer.writerows(results)
+    print(f"Résultats enregistrés dans {filename}")
+
+def run_experiments_with_csv_export(puzzles, goal, ks, output_file):
+    """Gère les tests avec différentes configurations et exporte les résultats."""
+    results = []
+    for puzzle in puzzles:
+        for k in ks:
+            print(f"Résolution pour k={k} avec le puzzle initial {puzzle}")
+            result = solvepuzzle_and_record(puzzle, goal, k)
+            results.append(result)
+    # Exporter les résultats après les tests
+    export_results_to_csv(output_file, results)
 
 def a_star_solver(puzzle, goal, k):
     """Résolution A* pour un puzzle n x n."""
@@ -28,7 +56,7 @@ def a_star_solver(puzzle, goal, k):
     closed_set = set()
     came_from = {}
     came_from[tuple(tuple(row) for row in puzzle)] = None  # État initial sans parent
-
+    move_count = 0
     while open_set:
         _, current = heappop(open_set)
         current_tuple = tuple(tuple(row) for row in current)
@@ -42,17 +70,18 @@ def a_star_solver(puzzle, goal, k):
                 current_tuple = came_from[current_tuple]
                 if current_tuple:
                     current = [list(row) for row in current_tuple]
-            print("Solution trouvée : ", path[::-1])  # Afficher le chemin inversé
-            return path[::-1]  # Retourner le chemin dans l'ordre correct
+            print(f"Solution trouvée en {move_count}: ", path[::-1])  # Afficher le chemin inversé
+            return path[::-1],move_count  # Retourner le chemin dans l'ordre correct
 
         closed_set.add(current_tuple)
         for neighbor in get_neighbors(current):
+            move_count += 1
             neighbor_tuple = tuple(tuple(row) for row in neighbor)
             if neighbor_tuple not in closed_set:
                 heappush(open_set, (f(neighbor), neighbor))
                 came_from[neighbor_tuple] = current_tuple
 
-    return []  # Retourner une liste vide si aucune solution n'est trouvée
+    return None,move_count # Retourner une liste vide si aucune solution n'est trouvée
 
 
 
